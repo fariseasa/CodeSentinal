@@ -1,0 +1,21 @@
+[
+    {
+        "issue": "The application crashes when discount is None",
+        "expected_files": [
+            "calculator.py"
+        ]
+    },
+    {
+        "issue": "The final price calculation is incorrect when no discount is provided",
+        "expected_files": [
+            "calculator.py"
+        ]
+    },
+    {
+        "issue": "The application starts with a missing discount value",
+        "expected_files": [
+            "app.py",
+            "calculator.py"
+        ]
+    }
+]

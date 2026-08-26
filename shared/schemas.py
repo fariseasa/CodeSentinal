@@ -34,6 +34,8 @@ class Patch(BaseModel):
 
 
 class TestResult(BaseModel):
+    __test__ = False
+
     passed: bool
     logs: str
     coverage_delta: Optional[float] = None
