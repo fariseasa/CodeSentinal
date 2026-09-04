@@ -7,10 +7,9 @@ def main():
 
     result = app.invoke(
         {
-            "repo_path": "eval/demo_repos/refactor_bug",
+            "repo_path": "eval/demo_repos/failing_test",
             "issue": (
-                "The get_first_item function crashes when an empty "
-                "list is provided. It should return None for an empty list."
+                "The calculate_total function produces an incorrect result for price and quantity."
             ),
             "retry_count": 0,
             "max_retries": 3,
