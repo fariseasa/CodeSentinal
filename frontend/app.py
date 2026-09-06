@@ -351,6 +351,119 @@ if run_button:
             )
 
         # ====================================================
+        # RETRY HISTORY
+        # ====================================================
+
+        retry_history = result.get(
+            "retry_history",
+            [],
+        )
+
+        st.divider()
+
+        st.subheader(
+            "🔄 Retry History"
+        )
+
+        if retry_history:
+
+            st.caption(
+                f"CodeSentinel performed "
+                f"{len(retry_history)} retry(s)."
+            )
+
+            for attempt in retry_history:
+
+                attempt_number = attempt.get(
+                    "attempt",
+                    "?",
+                )
+
+                reason = attempt.get(
+                    "reason",
+                    "No reason provided.",
+                )
+
+                test_passed = attempt.get(
+                    "test_passed"
+                )
+
+                attempt_critic_approved = attempt.get(
+                    "critic_approved"
+                )
+
+                critic_reasoning = attempt.get(
+                    "critic_reasoning"
+                )
+
+                with st.expander(
+                    f"🔄 Attempt {attempt_number}"
+                ):
+
+                    st.write(
+                        f"**Retry reason:** {reason}"
+                    )
+
+                    col1, col2 = st.columns(2)
+
+                    with col1:
+
+                        if test_passed is True:
+
+                            st.success(
+                                "✅ Tests passed"
+                            )
+
+                        elif test_passed is False:
+
+                            st.error(
+                                "❌ Tests failed"
+                            )
+
+                        else:
+
+                            st.info(
+                                "Tests: N/A"
+                            )
+
+                    with col2:
+
+                        if attempt_critic_approved is True:
+
+                            st.success(
+                                "✅ Critic approved"
+                            )
+
+                        elif attempt_critic_approved is False:
+
+                            st.warning(
+                                "⚠️ Critic rejected"
+                            )
+
+                        else:
+
+                            st.info(
+                                "Critic: N/A"
+                            )
+
+                    if critic_reasoning:
+
+                        st.write(
+                            "**Critic reasoning:**"
+                        )
+
+                        st.write(
+                            critic_reasoning
+                        )
+
+        else:
+
+            st.info(
+                "✅ No retries were required. "
+                "The first generated patch was accepted."
+            )
+
+        # ====================================================
         # ROOT CAUSE
         # ====================================================
 
@@ -529,7 +642,8 @@ if run_button:
         )
 
         if result.get(
-            "patched_zip_available"
+            "patched_zip_available",
+            False,
         ):
 
             st.success(

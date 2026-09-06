@@ -1,18 +1,25 @@
 from agent.issue.issue_understanding import IssueUnderstandingAgent
 from agent.analyzer.repository_analyzer import RepositoryAnalyzer
-from agent.retrieval.semantic_chunk_retriever import SemanticChunkRetriever
+from agent.retrieval.semantic_chunk_retriever import (
+    SemanticChunkRetriever,
+)
 from agent.investigation.investigation_agent import InvestigationAgent
 from agent.patch.patch_generator import PatchGenerator
 from execution.workspace import Workspace
 from execution.patch_applier import PatchApplier
 from execution.test_runner import TestRunner
 from agent.critic.critic_agent import CriticAgent
-from execution.test_runner import TestRunner
 
 from agent.graph.state import AgentState
 
 
-def issue_understanding_node(state: AgentState):
+# ============================================================
+# ISSUE UNDERSTANDING
+# ============================================================
+
+def issue_understanding_node(
+    state: AgentState,
+):
 
     agent = IssueUnderstandingAgent()
 
@@ -25,7 +32,13 @@ def issue_understanding_node(state: AgentState):
     }
 
 
-def repository_analysis_node(state: AgentState):
+# ============================================================
+# REPOSITORY ANALYSIS
+# ============================================================
+
+def repository_analysis_node(
+    state: AgentState,
+):
 
     analyzer = RepositoryAnalyzer(
         state["repo_path"]
@@ -38,17 +51,21 @@ def repository_analysis_node(state: AgentState):
     }
 
 
-def retrieval_node(state: AgentState):
+# ============================================================
+# SEMANTIC RETRIEVAL
+# ============================================================
+
+def retrieval_node(
+    state: AgentState,
+):
 
     retriever = SemanticChunkRetriever(
         state["repo_path"]
     )
 
-    query = state["issue"]
-
     retrieved_code = retriever.retrieve(
-        query=query,
-        top_k=5
+        query=state["issue"],
+        top_k=5,
     )
 
     return {
@@ -56,7 +73,13 @@ def retrieval_node(state: AgentState):
     }
 
 
-def investigation_node(state: AgentState):
+# ============================================================
+# INVESTIGATION
+# ============================================================
+
+def investigation_node(
+    state: AgentState,
+):
 
     agent = InvestigationAgent()
 
@@ -71,7 +94,13 @@ def investigation_node(state: AgentState):
     }
 
 
-def patch_generation_node(state: AgentState):
+# ============================================================
+# PATCH GENERATION
+# ============================================================
+
+def patch_generation_node(
+    state: AgentState,
+):
 
     generator = PatchGenerator()
 
@@ -86,7 +115,13 @@ def patch_generation_node(state: AgentState):
     }
 
 
-def workspace_node(state: AgentState):
+# ============================================================
+# WORKSPACE
+# ============================================================
+
+def workspace_node(
+    state: AgentState,
+):
 
     workspace = Workspace(
         state["repo_path"]
@@ -107,7 +142,13 @@ def workspace_node(state: AgentState):
     }
 
 
-def test_runner_node(state: AgentState):
+# ============================================================
+# TEST RUNNER
+# ============================================================
+
+def test_runner_node(
+    state: AgentState,
+):
 
     runner = TestRunner()
 
@@ -120,7 +161,13 @@ def test_runner_node(state: AgentState):
     }
 
 
-def critic_node(state: AgentState):
+# ============================================================
+# CRITIC
+# ============================================================
+
+def critic_node(
+    state: AgentState,
+):
 
     agent = CriticAgent()
 
@@ -135,70 +182,231 @@ def critic_node(state: AgentState):
     }
 
 
-def retry_node(state: AgentState):
+# ============================================================
+# RETRY
+# ============================================================
+
+def retry_node(
+    state: AgentState,
+):
 
     retry_count = state.get(
         "retry_count",
-        0
+        0,
+    )
+
+    new_retry_count = (
+        retry_count + 1
+    )
+
+    retry_history = list(
+        state.get(
+            "retry_history",
+            [],
+        )
+    )
+
+    test_result = state.get(
+        "test_result"
+    )
+
+    critic_verdict = state.get(
+        "critic_verdict"
+    )
+
+    # --------------------------------------------------------
+    # Determine retry reason
+    # --------------------------------------------------------
+
+    if (
+        test_result is not None
+        and not test_result.passed
+    ):
+
+        reason = (
+            "Repository tests failed "
+            "after the generated patch."
+        )
+
+    elif (
+        critic_verdict is not None
+        and not critic_verdict.approved
+    ):
+
+        reason = (
+            "Critic rejected the generated patch."
+        )
+
+    else:
+
+        reason = (
+            "CodeSentinel requested another "
+            "debugging attempt."
+        )
+
+    # --------------------------------------------------------
+    # Record retry information
+    # --------------------------------------------------------
+
+    retry_history.append(
+        {
+            "attempt": new_retry_count,
+            "reason": reason,
+            "test_passed": (
+                test_result.passed
+                if test_result is not None
+                else None
+            ),
+            "critic_approved": (
+                critic_verdict.approved
+                if critic_verdict is not None
+                else None
+            ),
+            "critic_reasoning": (
+                critic_verdict.reasoning
+                if critic_verdict is not None
+                else None
+            ),
+        }
     )
 
     return {
-        "retry_count": retry_count + 1
+        "retry_count": new_retry_count,
+        "retry_history": retry_history,
+        # Clear the previous critic verdict so
+        # a new attempt evaluates its own result.
+        "critic_verdict": None,
     }
 
 
-def report_node(state: AgentState):
+# ============================================================
+# FINAL REPORT
+# ============================================================
 
-    test_result = state.get("test_result")
-    hypothesis = state.get("hypothesis")
-    patch = state.get("patch")
-    verdict = state.get("critic_verdict")
+def report_node(
+    state: AgentState,
+):
+
+    test_result = state.get(
+        "test_result"
+    )
+
+    hypothesis = state.get(
+        "hypothesis"
+    )
+
+    patch = state.get(
+        "patch"
+    )
+
+    verdict = state.get(
+        "critic_verdict"
+    )
+
+    retry_history = state.get(
+        "retry_history",
+        [],
+    )
+
+    # --------------------------------------------------------
+    # Build retry section
+    # --------------------------------------------------------
+
+    if retry_history:
+
+        retry_lines = []
+
+        for attempt in retry_history:
+
+            retry_lines.append(
+                f"### Retry {attempt['attempt']}\n"
+                f"Reason: {attempt['reason']}\n"
+                f"Tests Passed: "
+                f"{attempt['test_passed']}\n"
+                f"Critic Approved: "
+                f"{attempt['critic_approved']}\n"
+                f"Critic Reasoning: "
+                f"{attempt['critic_reasoning'] or 'N/A'}"
+            )
+
+        retry_section = "\n\n".join(
+            retry_lines
+        )
+
+    else:
+
+        retry_section = (
+            "No retries were required."
+        )
+
+    # --------------------------------------------------------
+    # Final report
+    # --------------------------------------------------------
 
     report = f"""
 # CodeSentinel PR Report
 
 ## Root Cause
 
-{hypothesis.explanation if hypothesis else "Not available"}
+{
+    hypothesis.explanation
+    if hypothesis
+    else "Not available"
+}
 
 ## Confidence
 
-{hypothesis.confidence if hypothesis else "N/A"}
+{
+    hypothesis.confidence
+    if hypothesis
+    else "N/A"
+}
 
 ## Changed File
 
-{patch.file_path if patch else "N/A"}
+{
+    patch.file_path
+    if patch
+    else "N/A"
+}
 
 ## Tests
 
-Passed: {test_result.passed if test_result else "N/A"}
+Passed: {
+    test_result.passed
+    if test_result
+    else "N/A"
+}
 
 ## Test Logs
 
-{test_result.logs if test_result else "N/A"}
+{
+    test_result.logs
+    if test_result
+    else "N/A"
+}
 
 ## Critic Verdict
 
-Approved: {verdict.approved if verdict else "N/A"}
+Approved: {
+    verdict.approved
+    if verdict
+    else "N/A"
+}
 
 ## Critic Reasoning
 
-{verdict.reasoning if verdict else "N/A"}
+{
+    verdict.reasoning
+    if verdict
+    else "N/A"
+}
+
+## Retry History
+
+{retry_section}
 """
 
     return {
         "report": report
-    }
-
-
-def test_runner_node(state: AgentState):
-
-    runner = TestRunner()
-
-    test_result = runner.run(
-        workspace_path=state["workspace_path"]
-    )
-
-    return {
-        "test_result": test_result
     }

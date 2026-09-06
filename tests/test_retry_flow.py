@@ -104,3 +104,51 @@ def test_retry_limit_goes_to_report():
 
     route = route_test_result(state)
     assert route == "report"
+
+
+def test_retry_node_records_history():
+
+    state = {
+        "retry_count": 0,
+        "max_retries": 3,
+        "retry_history": [],
+        "critic_verdict": CriticVerdict(
+            approved=False,
+            reasoning="Patch is incorrect.",
+            retry=True,
+        ),
+        "test_result": TestResult(
+            passed=True,
+            logs="2 passed",
+            coverage_delta=0.0,
+        ),
+    }
+
+    result = retry_node(state)
+
+    assert result["retry_count"] == 1
+
+    assert "retry_history" in result
+
+    assert len(result["retry_history"]) == 1
+
+    attempt = result["retry_history"][0]
+
+    assert attempt["attempt"] == 1
+
+    assert (
+        attempt["reason"]
+        == "Critic rejected the generated patch."
+    )
+
+    assert attempt["test_passed"] is True
+
+    assert (
+        attempt["critic_approved"]
+        is False
+    )
+
+    assert (
+        attempt["critic_reasoning"]
+        == "Patch is incorrect."
+    )

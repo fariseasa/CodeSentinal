@@ -1,4 +1,8 @@
-from langgraph.graph import StateGraph, START, END
+from langgraph.graph import (
+    StateGraph,
+    START,
+    END,
+)
 
 from agent.graph.state import AgentState
 
@@ -16,9 +20,17 @@ from agent.graph.nodes import (
 )
 
 
-def critic_router(state: AgentState):
+# ============================================================
+# CRITIC ROUTER
+# ============================================================
 
-    verdict = state.get("critic_verdict")
+def critic_router(
+    state: AgentState,
+):
+
+    verdict = state.get(
+        "critic_verdict"
+    )
 
     if verdict is None:
         return "report"
@@ -28,23 +40,34 @@ def critic_router(state: AgentState):
 
     retry_count = state.get(
         "retry_count",
-        0
+        0,
     )
 
     max_retries = state.get(
         "max_retries",
-        3
+        3,
     )
 
-    if verdict.retry and retry_count < max_retries:
+    if (
+        verdict.retry
+        and retry_count < max_retries
+    ):
         return "retry"
 
     return "report"
 
 
-def route_test_result(state: AgentState):
+# ============================================================
+# TEST RESULT ROUTER
+# ============================================================
 
-    test_result = state.get("test_result")
+def route_test_result(
+    state: AgentState,
+):
+
+    test_result = state.get(
+        "test_result"
+    )
 
     if test_result is None:
         return "critic"
@@ -54,12 +77,12 @@ def route_test_result(state: AgentState):
 
     retry_count = state.get(
         "retry_count",
-        0
+        0,
     )
 
     max_retries = state.get(
         "max_retries",
-        3
+        3,
     )
 
     if retry_count < max_retries:
@@ -68,13 +91,19 @@ def route_test_result(state: AgentState):
     return "report"
 
 
+# ============================================================
+# BUILD GRAPH
+# ============================================================
+
 def build_graph():
 
-    graph = StateGraph(AgentState)
+    graph = StateGraph(
+        AgentState
+    )
 
-    # --------------------------------
+    # --------------------------------------------------------
     # Nodes
-    # --------------------------------
+    # --------------------------------------------------------
 
     graph.add_node(
         "issue_understanding",
@@ -126,9 +155,9 @@ def build_graph():
         report_node,
     )
 
-    # --------------------------------
+    # --------------------------------------------------------
     # Main pipeline
-    # --------------------------------
+    # --------------------------------------------------------
 
     graph.add_edge(
         START,
@@ -165,9 +194,9 @@ def build_graph():
         "test_runner",
     )
 
-    # --------------------------------
-    # Test result routing
-    # --------------------------------
+    # --------------------------------------------------------
+    # Test routing
+    # --------------------------------------------------------
 
     graph.add_conditional_edges(
         "test_runner",
@@ -179,9 +208,9 @@ def build_graph():
         },
     )
 
-    # --------------------------------
+    # --------------------------------------------------------
     # Critic routing
-    # --------------------------------
+    # --------------------------------------------------------
 
     graph.add_conditional_edges(
         "critic",
@@ -192,18 +221,18 @@ def build_graph():
         },
     )
 
-    # --------------------------------
-    # Retry
-    # --------------------------------
+    # --------------------------------------------------------
+    # Retry → generate another patch
+    # --------------------------------------------------------
 
     graph.add_edge(
         "retry",
         "patch_generation",
     )
 
-    # --------------------------------
-    # Final
-    # --------------------------------
+    # --------------------------------------------------------
+    # Final report
+    # --------------------------------------------------------
 
     graph.add_edge(
         "report",

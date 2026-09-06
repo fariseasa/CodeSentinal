@@ -85,6 +85,7 @@ class RunResult(BaseModel):
     critic_reasoning: str | None = None
 
     retry_count: int = 0
+    retry_history: list[dict] = []
 
     report: str | None = None
 
@@ -591,9 +592,9 @@ def create_run(
                 else None
             ),
 
-            "retry_count": result.get(
-                "retry_count",
-                0,
+           "retry_history": result.get(
+                "retry_history",
+                [],
             ),
 
             "report": result.get(

@@ -1,4 +1,5 @@
 from typing import List, Optional
+
 from pydantic import BaseModel
 
 
@@ -45,6 +46,14 @@ class CriticVerdict(BaseModel):
     approved: bool
     reasoning: str
     retry: bool
+
+
+class RetryAttempt(BaseModel):
+    attempt: int
+    reason: str
+    test_passed: Optional[bool] = None
+    critic_approved: Optional[bool] = None
+    critic_reasoning: Optional[str] = None
 
 
 class PRReport(BaseModel):

@@ -39,3 +39,5 @@ class AgentState(TypedDict, total=False):
 
     # Final output
     report: str
+
+    retry_history: list[dict]
